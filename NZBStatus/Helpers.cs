@@ -23,19 +23,18 @@ namespace NZBStatus
             var suffix = "K";
             if (value >= 1024)
             {
-                value = value/1024;
-                suffix = "M";
-            }
-            if (value >= 1024)
-            {
                 value = value / 1024;
-                suffix = "G";
+                suffix = "M"; if (value >= 1024)
+                {
+                    value = value / 1024;
+                    suffix = "G"; if (value >= 1024)
+                    {
+                        value = value / 1024;
+                        suffix = "T";
+                    }
+                }
             }
-            if (value >= 1024)
-            {
-                value = value / 1024;
-                suffix = "T";
-            }
+           
             string speedToString = String.Format("{0} {1}B/s", value.Round2Dp().ToString(CultureInfo.InvariantCulture).PadLeft(7), suffix);
             return speedToString;
         }
@@ -52,12 +51,13 @@ namespace NZBStatus
             {
                 value = value / 1024;
                 suffix = "G";
+                if (value >= 1024)
+                {
+                    value = value / 1024;
+                    suffix = "T";
+                }
             }
-            if (value >= 1024)
-            {
-                value = value / 1024;
-                suffix = "T";
-            }
+            
             
             string result = String.Format("{0} {1}B", value.Round2Dp().ToString(CultureInfo.InvariantCulture).PadLeft(5), suffix);
             return result;
