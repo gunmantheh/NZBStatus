@@ -6,6 +6,8 @@ using NZBStatus.DTOs;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
+using csEnum = NZBStatus.Enums.ConnectionStatus;
+
 namespace NZBStatus
 {
     public class JsonReader
@@ -15,6 +17,7 @@ namespace NZBStatus
         private JToken _jsonString;
         private JArray _slots;
         private readonly WebClient _webClient;
+        private csEnum _connectionStatus;
 
         public decimal TotalMB
         {
@@ -29,6 +32,11 @@ namespace NZBStatus
         public decimal AlreadyDownloadedMB
         {
             get { return GetRootValue<decimal>("mb") - GetRootValue<decimal>("mbleft"); }
+        }
+
+        public csEnum ConnectionStatus()
+        {
+            return _connectionStatus;
         }
 
         public bool IsDownloading
@@ -112,13 +120,34 @@ namespace NZBStatus
 
         private void InitializeData()
         {
-            _jsonString = JObject.Parse(GetData()).GetValue("queue");
-            _slots = (JArray)_jsonString["slots"];
+            _jsonString = JObject.Parse(GetData()).GetValue("queue") ?? new JObject();
+            _slots = (JArray)_jsonString["slots"] ?? new JArray();
         }
 
         private string GetData()
         {
-            return _webClient.DownloadString(string.Format("{0}&apikey={1}", _url, _apiKey));
+            string result;
+            try
+            {
+                result = _webClient.DownloadString(string.Format("{0}&apikey={1}", _url, _apiKey));
+                _connectionStatus = csEnum.Ok;
+            }
+            catch (WebException e)
+            {
+
+                switch (e.Status)
+                {
+                    case WebExceptionStatus.Timeout:
+                        _connectionStatus = csEnum.Timeout;
+                        break;
+                    case WebExceptionStatus.ConnectFailure:
+                    case WebExceptionStatus.NameResolutionFailure:
+                        _connectionStatus = csEnum.CantConnect;
+                        break;
+                }
+                result = "{}";
+            }
+            return result;
         }
 
         public void RefreshData()

@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using NZBStatus.DTOs;
+using NZBStatus.Enums;
 using Newtonsoft.Json.Linq;
 
 namespace NZBStatus
@@ -27,7 +28,7 @@ namespace NZBStatus
 
                 do
                 {
-                    
+
                     while (!Console.KeyAvailable)
                     {
                         if (i > 20)
@@ -43,36 +44,36 @@ namespace NZBStatus
                                 i = oldI; // resumes in the process
                             }
                             queue = jsr.GetAllSlots().Where(x => x.index != 0);
-                        qs.Refresh(queue.ToList());
-                        Console.Clear();
+                            qs.Refresh(queue.ToList());
+                            Console.Clear();
 
-                        // Console.WriteLine(jsonReader.TotalMB);
-                        currentSlot = jsr.GetCurrentSlot();
-                        var progressbar = Helpers.GetProgressbar(currentSlot.percentage);
-                        
-                        Console.Write("Filename: ");
-                        Console.ForegroundColor = !Helpers.IsSelected(0, qs.Position) ? ConsoleColor.Green : ConsoleColor.Black;
-                        Console.WriteLine(currentSlot.filename.MaxWidth());
-                        Console.ResetColor();
-                        Console.WriteLine(string.Format("{0} {1}%", progressbar, currentSlot.percentage).MaxWidth());
-                        Console.WriteLine(string.Format("Size: {0}", currentSlot.size).MaxWidth());
+                            // Console.WriteLine(jsonReader.TotalMB);
+                            currentSlot = jsr.GetCurrentSlot();
+                            var progressbar = Helpers.GetProgressbar(currentSlot.percentage);
 
-                        Console.WriteLine();
-                        Console.WriteLine("Queue:");
-
-                        foreach (var c in queue)
-                        {
-                            Console.ForegroundColor = !Helpers.IsSelected(c.index, qs.Position) ? ConsoleColor.DarkYellow : ConsoleColor.Black;
-                            Console.Write("[{0}]", c.size);
-                            Console.Write(" - ");
-                            Console.WriteLine(string.Format("[{0}]", c.filename).MaxWidth());
+                            Console.Write("Filename: ");
+                            Console.ForegroundColor = !Helpers.IsSelected(0, qs.Position) ? ConsoleColor.Green : ConsoleColor.Black;
+                            Console.WriteLine(currentSlot.filename.MaxWidth());
                             Console.ResetColor();
+                            Console.WriteLine(string.Format("{0} {1}%", progressbar, currentSlot.percentage).MaxWidth());
+                            Console.WriteLine(string.Format("Size: {0}", currentSlot.size).MaxWidth());
+
+                            Console.WriteLine();
+                            if (queue.Any())
+                            {
+                                Console.WriteLine("Queue:");
+                                foreach (var c in queue)
+                                {
+                                    Console.ForegroundColor = !Helpers.IsSelected(c.index, qs.Position) ? ConsoleColor.DarkYellow : ConsoleColor.Black;
+                                    Console.Write("[{0}]", c.size);
+                                    Console.Write(" - ");
+                                    Console.WriteLine(string.Format("[{0}]", c.filename).MaxWidth());
+                                    Console.ResetColor();
+                                }
+                            }
+                            UpdateTitle(jsr);
                         }
-
-
-                        UpdateTitle(jsr);
-                    }
-                    Thread.Sleep(50);
+                        Thread.Sleep(50);
                         i++;
                     }
                     pressedKey = Console.ReadKey(true).Key;
@@ -115,7 +116,7 @@ namespace NZBStatus
         private static void UpdateTitle(JsonReader jsonReader)
         {
             Console.Title = String.Format("{0} -[{1}] - SabNZBd watcher: {2}/{3}",
-                                          jsonReader.StatusIcon,
+                jsonReader.ConnectionStatus() != ConnectionStatus.Ok ? jsonReader.ConnectionStatus().ToString() : jsonReader.StatusIcon,
                                           jsonReader.Speed.SpeedToString(),
                                           jsonReader.AlreadyDownloadedMB.SizeToString(),
                                           jsonReader.TotalMB.SizeToString());
