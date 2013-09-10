@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using NZBStatus.DTOs;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace NZBStatus
@@ -15,18 +18,63 @@ namespace NZBStatus
 
         public decimal TotalMB
         {
-            get
-            {
-                return GetRootValue<decimal>("mb");
-            }
+            get { return GetRootValue<decimal>("mb"); }
+        }
+
+        public decimal Speed
+        {
+            get { return GetRootValue<decimal>("kbpersec"); }
         }
 
         public decimal AlreadyDownloadedMB
         {
-            get
+            get { return GetRootValue<decimal>("mb") - GetRootValue<decimal>("mbleft"); }
+        }
+
+        public bool IsDownloading
+        {
+            get { return Status == "Downloading"; }
+        }
+
+        public string Status
+        {
+            get { return GetRootValue<string>("status"); }
+        }
+        public string StatusIcon
+        {
+            get 
             {
-                return GetRootValue<decimal>("mb") - GetRootValue<decimal>("mbleft");
+                switch (Status)
+                {
+                    case "Downloading":
+                        return "|>";
+                    case "Idle":
+                        return "█";
+                    case "Paused":
+                        return "||";
+                    default:
+                        return "??";
+                }
             }
+        }
+        
+        public Slot GetCurrentSlot()
+        {
+            if (_slots.Count > 0)
+            {
+                return JsonConvert.DeserializeObject<Slot>(_slots[0].ToString());
+            }
+            return new Slot();
+        }
+
+        public HashSet<Slot> GetAllSlots()
+        {
+            var result = new HashSet<Slot>();
+            foreach (JToken slot in _slots)
+            {
+                result.Add(JsonConvert.DeserializeObject<Slot>(slot.ToString()));
+            }
+            return result;
         }
 
         private TClassType GetRootValue<TClassType>(string key)
@@ -36,12 +84,30 @@ namespace NZBStatus
             return value;
         }
 
-        public JsonReader(string url, string apiKey)
+        private TClassType GetCurrentSlotValue<TClassType>(string key)
         {
-            _url = url;
+            if (_slots.Count > 0)
+            {
+                var token = _slots[0].SelectToken(key);
+                var value = token != null ? token.Value<TClassType>() : default(TClassType);
+                return value;
+            }
+            return default(TClassType);
+        }
+
+        public JsonReader(string url, string apiKey, bool dontParse = false, string mode = "queue")
+        {
+            _url = string.Format("{0}/sabnzbd/api?mode={1}&output=json", url, mode);
             _apiKey = apiKey;
             _webClient = new WebClient();
-            InitializeData();
+            if (!dontParse)
+            {
+                InitializeData();
+            }
+            else
+            {
+                GetData();
+            }
         }
 
         private void InitializeData()
@@ -55,5 +121,9 @@ namespace NZBStatus
             return _webClient.DownloadString(string.Format("{0}&apikey={1}", _url, _apiKey));
         }
 
+        public void RefreshData()
+        {
+            InitializeData();
+        }
     }
 }
