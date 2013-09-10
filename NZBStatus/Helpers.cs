@@ -65,7 +65,7 @@ namespace NZBStatus
 
         public static string MaxWidth(this string text)
         {
-            if (text.Length + Console.CursorLeft > Console.WindowWidth)
+            if (text != null && text.Length + Console.CursorLeft > Console.WindowWidth)
             {
                 text = text.Substring(0, Console.WindowWidth - Console.CursorLeft - 8) + "..." + text.Substring(text.Length - 4,4);
             }
